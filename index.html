@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玻璃擬態番茄鐘 | Glassmorphic Pomodoro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif;
+            user-select: none;
+        }
+
+        /* 主題背景漸層變幻 */
+        body {
+            min-height: 100vh;
+            transition: background 0.8s ease-in-out;
+            overflow-x: hidden;
+            position: relative;
+            background-attachment: fixed;
+        }
+
+        body.theme-tomato {
+            background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 50%, #FF8E53 100%);
+        }
+        body.theme-matcha {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 50%, #0575E6 100%);
+        }
+        body.theme-ocean {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 50%, #1A2980 100%);
+        }
+        body.theme-gray {
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 50%, #141e30 100%);
+        }
+        body.theme-dark {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+        }
+
+        /* 動態背景彩色流動光暈 (Glassmorphism Essential Bubbles) */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.6;
+            z-index: 0;
+            animation: floatBlob 18s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        .blob-1 {
+            width: 380px;
+            height: 380px;
+            background: rgba(255, 255, 255, 0.35);
+            top: -50px;
+            left: -50px;
+        }
+        .blob-2 {
+            width: 450px;
+            height: 450px;
+            background: rgba(255, 215, 0, 0.3);
+            bottom: -100px;
+            right: -50px;
+            animation-delay: -5s;
+        }
+        .blob-3 {
+            width: 320px;
+            height: 320px;
+            background: rgba(255, 105, 180, 0.25);
+            top: 40%;
+            left: 30%;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatBlob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            50% { transform: translate(60px, 40px) scale(1.15); }
+            100% { transform: translate(-40px, 80px) scale(0.9); }
+        }
+
+        /* 高質感玻璃擬態卡片 (Ultra-Refined Glassmorphism) */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-top: 1px solid rgba(255, 255, 255, 0.55);
+            border-left: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+                0 20px 50px rgba(0, 0, 0, 0.18);
+            border-radius: 24px;
+            position: relative;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .glass-card:hover {
+            box-shadow: 
+                inset 0 1px 2px 0 rgba(255, 255, 255, 0.6),
+                0 25px 60px rgba(0, 0, 0, 0.25);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-top: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        .glass-button:hover {
+            background: rgba(255, 255, 255, 0.32);
+            transform: translateY(-2px);
+            box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.5), 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+        .glass-button:active {
+            transform: translateY(1px);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+        .glass-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        /* 倒數圓環進度條 SVG */
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* 自訂美化 Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 滑塊 Switch & Range Input 樣式 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            height: 6px;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #38ef7d;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: rgba(56, 239, 125, 0.4);
+        }
+    </style>
+</head>
+<body class="theme-tomato text-white antialiased flex flex-col min-h-screen">
+
+    <!-- 背景動態流動光暈氣泡 -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <!-- 頂部導覽列 Header -->
+    <header class="w-full max-w-6xl mx-auto px-4 py-6 flex justify-between items-center relative z-20">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-2xl glass-button flex items-center justify-center text-2xl shadow-lg">
+                🍅
+            </div>
+            <h1 class="text-xl md:text-2xl font-extrabold tracking-tight drop-shadow-md">
+                Glass Pomodoro
+            </h1>
+        </div>
+
+        <div class="flex items-center space-x-2 md:space-x-3">
+            <!-- 主題選擇下拉選單 -->
+            <div class="relative">
+                <select id="themeSelect" onchange="changeTheme(this.value)" class="glass-button px-3 py-2 rounded-xl text-sm font-medium text-white cursor-pointer focus:outline-none appearance-none pr-8">
+                    <option value="theme-tomato" class="text-gray-800">🍅 番茄紅 (Classic)</option>
+                    <option value="theme-matcha" class="text-gray-800">🍵 抹茶綠 (Matcha)</option>
+                    <option value="theme-ocean" class="text-gray-800">🌊 海洋藍 (Ocean)</option>
+                    <option value="theme-gray" class="text-gray-800">⚙️ 極簡灰 (Minimal)</option>
+                    <option value="theme-dark" class="text-gray-800">🌙 深色模式 (Dark)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white opacity-80">
+                    ▼
+                </div>
+            </div>
+
+            <!-- 設定按鈕 -->
+            <button onclick="openSettingsModal()" class="glass-button p-2.5 rounded-xl text-lg hover:rotate-45 transition-transform duration-300" title="自訂時間設定">
+                ⚙️
+            </button>
+        </div>
+    </header>
+
+    <!-- 主要內容區 Main Content Grid -->
+    <main class="w-full max-w-6xl mx-auto px-4 pb-12 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10 flex-grow">
+        
+        <!-- 左側主卡片：核心計時器 (7 columns on large) -->
+        <section class="lg:col-span-7 flex flex-col space-y-6">
+            
+            <!-- 計時器玻璃卡片 -->
+            <div class="glass-card p-6 md:p-8 flex flex-col items-center justify-center text-center">
+                
+                <!-- 階段選擇 Toggle (專注 / 休息) -->
+                <div class="flex space-x-2 bg-black/10 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 mb-6">
+                    <button id="modeFocusBtn" onclick="switchMode('focus')" class="px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-white/30 text-white shadow-md">
+                        🎯 專注模式
+                    </button>
+                    <button id="modeBreakBtn" onclick="switchMode('break')" class="px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 text-white/70 hover:text-white">
+                        ☕ 休息模式
+                    </button>
+                </div>
+
+                <!-- 當前綁定任務標示 -->
+                <div id="activeTaskDisplay" class="mb-4 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs md:text-sm font-medium tracking-wide flex items-center space-x-2 max-w-full truncate">
+                    <span class="opacity-70">當前任務：</span>
+                    <span id="activeTaskName" class="font-bold text-yellow-200 truncate">未選擇任務 (自由專注)</span>
+                </div>
+
+                <!-- 倒數圓環與數字顯示 -->
+                <div class="relative my-4 flex items-center justify-center">
+                    <svg class="w-64 h-64 md:w-80 md:h-80 drop-shadow-2xl">
+                        <!-- 背景圓環 -->
+                        <circle cx="50%" cy="50%" r="110" stroke="rgba(255, 255, 255, 0.15)" stroke-width="12" fill="none" />
+                        <!-- 動態進度條 -->
+                        <circle id="progressRing" class="progress-ring-circle" cx="50%" cy="50%" r="110" stroke="url(#gradient)" stroke-width="12" stroke-linecap="round" fill="none" stroke-dasharray="691.15" stroke-dashoffset="0" />
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="100%" stop-color="#FFD700" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <!-- 中央時間數字 -->
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span id="timeDisplay" class="text-5xl md:text-7xl font-extrabold tracking-tighter drop-shadow-lg font-mono">
+                            25:00
+                        </span>
+                        <span id="timerStatusText" class="text-xs md:text-sm tracking-widest uppercase opacity-75 mt-2 font-semibold">
+                            READY TO FOCUS
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 計時控制按鈕列 -->
+                <div class="flex items-center space-x-4 mt-4">
+                    <button id="startPauseBtn" onclick="toggleTimer()" class="glass-button px-8 py-3.5 rounded-2xl text-lg font-bold flex items-center space-x-2 shadow-xl hover:scale-105 active:scale-95 transition-transform">
+                        <span id="startPauseIcon">▶</span>
+                        <span id="startPauseText">開始專注</span>
+                    </button>
+                    <button onclick="resetTimer()" class="glass-button p-3.5 rounded-2xl text-lg hover:rotate-180 transition-transform duration-500" title="重置計時">
+                        🔄
+                    </button>
+                    <button onclick="skipTimer()" class="glass-button p-3.5 rounded-2xl text-lg hover:translate-x-1 transition-transform" title="跳過階段">
+                        ⏭️
+                    </button>
+                </div>
+            </div>
+
+            <!-- 環境音效控制面板 (Web Audio API Engine) -->
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-lg font-bold flex items-center space-x-2">
+                        <span>🎧</span>
+                        <span>高音質擬真環境音效 (Web Audio Synthesis)</span>
+                    </h2>
+                    <!-- 主音量滑桿 -->
+                    <div class="flex items-center space-x-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
+                        <span class="text-xs font-semibold">主音量</span>
+                        <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8" oninput="updateMasterVolume(this.value)" class="w-20">
+                    </div>
+                </div>
+
+                <!-- 6 種音效控制網格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- 🌧️ 雨聲 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🌧️</span>
+                            <div>
+                                <div class="font-semibold text-sm">自然雨聲 (Rain)</div>
+                                <div class="text-xs text-white/60">含高頻雨滴彈跳脈衝</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-rain" min="0" max="1" step="0.01" value="0.5" oninput="setSoundVolume('rain', this.value)" class="w-16 md:w-20">
+                            <button id="btn-rain" onclick="toggleSound('rain')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 🌊 海浪聲 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🌊</span>
+                            <div>
+                                <div class="font-semibold text-sm">海浪潮汐 (Ocean)</div>
+                                <div class="text-xs text-white/60">LFO 雙向低頻潮汐調變</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-ocean" min="0" max="1" step="0.01" value="0.5" oninput="setSoundVolume('ocean', this.value)" class="w-16 md:w-20">
+                            <button id="btn-ocean" onclick="toggleSound('ocean')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 🔥 篝火聲 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🔥</span>
+                            <div>
+                                <div class="font-semibold text-sm">營火柴爆 (Bonfire)</div>
+                                <div class="text-xs text-white/60">隨機木柴燃燒爆裂點滴</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-bonfire" min="0" max="1" step="0.01" value="0.5" oninput="setSoundVolume('bonfire', this.value)" class="w-16 md:w-20">
+                            <button id="btn-bonfire" onclick="toggleSound('bonfire')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ☕ 咖啡廳 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">☕</span>
+                            <div>
+                                <div class="font-semibold text-sm">人文咖啡廳 (Café)</div>
+                                <div class="text-xs text-white/60">人聲共振頻段環境音</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-cafe" min="0" max="1" step="0.01" value="0.4" oninput="setSoundVolume('cafe', this.value)" class="w-16 md:w-20">
+                            <button id="btn-cafe" onclick="toggleSound('cafe')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 🐦 森林鳥鳴 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🐦</span>
+                            <div>
+                                <div class="font-semibold text-sm">森林晨鳥 (Birds)</div>
+                                <div class="text-xs text-white/60">FM 頻率調變輕快鳴叫</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-birds" min="0" max="1" step="0.01" value="0.3" oninput="setSoundVolume('birds', this.value)" class="w-16 md:w-20">
+                            <button id="btn-birds" onclick="toggleSound('birds')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 🤍 白噪音 -->
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">🤍</span>
+                            <div>
+                                <div class="font-semibold text-sm">極簡白噪音 (White)</div>
+                                <div class="text-xs text-white/60">全頻率均勻平坦穩定聲</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="vol-white" min="0" max="1" step="0.01" value="0.3" oninput="setSoundVolume('white', this.value)" class="w-16 md:w-20">
+                            <button id="btn-white" onclick="toggleSound('white')" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold">
+                                播放
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 右側輔助卡片：待辦事項與統計日誌 (5 columns on large) -->
+        <section class="lg:col-span-5 flex flex-col space-y-6">
+            
+            <!-- 待辦事項清單 To-Do List -->
+            <div class="glass-card p-6 flex flex-col h-96">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold flex items-center space-x-2">
+                        <span>📋</span>
+                        <span>專注任務清單</span>
+                    </h2>
+                    <span id="todoCountDisplay" class="text-xs px-2.5 py-1 rounded-full bg-white/20 font-medium">
+                        0 / 0 完成
+                    </span>
+                </div>
+
+                <!-- 新增任務輸入框 -->
+                <form onsubmit="addTodo(event)" class="flex space-x-2 mb-4">
+                    <input type="text" id="todoInput" placeholder="+ 新增待辦任務..." class="glass-input flex-grow px-4 py-2 rounded-xl text-sm font-medium">
+                    <button type="submit" class="glass-button px-4 py-2 rounded-xl font-bold text-sm">
+                        新增
+                    </button>
+                </form>
+
+                <!-- 任務清單列表（支援 Scrollbar） -->
+                <div id="todoList" class="flex-grow overflow-y-auto space-y-2.5 pr-1">
+                    <!-- 動態渲染 Tasks -->
+                </div>
+            </div>
+
+            <!-- 數據分析與趨勢圖表 Chart.js -->
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold flex items-center space-x-2">
+                        <span>📊</span>
+                        <span>專注數據分析</span>
+                    </h2>
+                    <!-- 週 / 月 切換 -->
+                    <div class="flex space-x-1 bg-black/10 p-1 rounded-xl text-xs">
+                        <button id="chartWeekBtn" onclick="switchChartMode('week')" class="px-2.5 py-1 rounded-lg font-semibold bg-white/30 text-white">
+                            本週
+                        </button>
+                        <button id="chartMonthBtn" onclick="switchChartMode('month')" class="px-2.5 py-1 rounded-lg font-semibold text-white/70 hover:text-white">
+                            本月
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 圖表 Canvas -->
+                <div class="w-full h-44 relative">
+                    <canvas id="focusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 時間戳記詳細日誌 (Logs) -->
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-bold flex items-center space-x-2">
+                        <span>📜</span>
+                        <span>完成時間戳記紀錄</span>
+                    </h2>
+                    <button onclick="clearLogs()" class="text-xs text-white/60 hover:text-white underline">
+                        清空紀錄
+                    </button>
+                </div>
+                
+                <div id="logsContainer" class="max-h-40 overflow-y-auto space-y-2 pr-1 text-xs">
+                    <!-- 動態渲染 Logs -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- 時間設定 Modal (Settings) -->
+    <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md hidden transition-opacity duration-300">
+        <div class="glass-card p-6 md:p-8 w-full max-w-md mx-4 relative transform transition-all scale-100">
+            <h3 class="text-xl font-bold mb-6 flex items-center space-x-2">
+                <span>⚙️</span>
+                <span>自訂專注與休息時間</span>
+            </h3>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">🎯 專注時間 (分鐘)</label>
+                    <input type="number" id="settingFocusInput" min="1" max="180" class="glass-input w-full px-4 py-2.5 rounded-xl font-bold text-center">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">☕ 休息時間 (分鐘)</label>
+                    <input type="number" id="settingBreakInput" min="1" max="60" class="glass-input w-full px-4 py-2.5 rounded-xl font-bold text-center">
+                </div>
+            </div>
+
+            <div class="flex space-x-3 justify-end">
+                <button onclick="closeSettingsModal()" class="glass-button px-5 py-2.5 rounded-xl text-sm font-semibold">
+                    取消
+                </button>
+                <button onclick="saveSettings()" class="glass-button px-6 py-2.5 rounded-xl text-sm font-bold bg-white/30">
+                    儲存設定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 應用邏輯 -->
+    <script>
+        /* ==========================================================================
+           1. Web Audio API 高音質擬真聲學引擎 (Sound Engine)
+           ========================================================================== */
+        class WebSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.activeNodes = {};
+                this.masterVolValue = 0.8;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.setValueAtTime(this.masterVolValue, this.ctx.currentTime);
+                    this.masterGain.connect(this.ctx.destination);
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            setMasterVolume(val) {
+                this.masterVolValue = parseFloat(val);
+                if (this.masterGain && this.ctx) {
+                    this.masterGain.gain.setValueAtTime(this.masterVolValue, this.ctx.currentTime);
+                }
+            }
+
+            /* --- 木魚/磬聲 溫和提示音 --- */
+            playChime() {
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                // 主基音振盪器
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                // 泛音振盪器 (諧波)
+                const subOsc = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5 清亮木魚/磬聲頻率
+                osc.frequency.exponentialRampToValueAtTime(261.63, now + 1.8);
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(0.6, now + 0.02); // 溫和 Attack
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5); // 悠揚 Decay
+
+                subOsc.type = 'sine';
+                subOsc.frequency.setValueAtTime(1046.50, now); // 高八度微柔和共振
+                subGain.gain.setValueAtTime(0.15, now);
+                subGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+                osc.connect(gain);
+                subOsc.connect(subGain);
+                subGain.connect(this.masterGain);
+                gain.connect(this.masterGain);
+
+                osc.start(now);
+                subOsc.start(now);
+                osc.stop(now + 2.6);
+                subOsc.stop(now + 2.6);
+            }
+
+            /* --- 6 種具備獨特聲學特徵的音效合成 --- */
+            startSound(type, volume = 0.5) {
+                this.init();
+                if (this.activeNodes[type]) return;
+
+                const soundGroup = { gain: this.ctx.createGain(), intervalId: null, nodes: [] };
+                soundGroup.gain.gain.setValueAtTime(parseFloat(volume), this.ctx.currentTime);
+                soundGroup.gain.connect(this.masterGain);
+
+                const bufferSize = 2 * this.ctx.sampleRate;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+
+                if (type === 'white') {
+                    // 純粹全頻率白噪音
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const whiteSource = this.ctx.createBufferSource();
+                    whiteSource.buffer = noiseBuffer;
+                    whiteSource.loop = true;
+                    whiteSource.connect(soundGroup.gain);
+                    whiteSource.start();
+                    soundGroup.nodes.push(whiteSource);
+
+                } else if (type === 'rain') {
+                    // 自然雨聲：粉紅噪音底音 + 隨機微高頻雨滴擊打聲脈衝
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const rainSource = this.ctx.createBufferSource();
+                    rainSource.buffer = noiseBuffer;
+                    rainSource.loop = true;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+
+                    rainSource.connect(filter);
+                    filter.connect(soundGroup.gain);
+                    rainSource.start();
+                    soundGroup.nodes.push(rainSource);
+
+                    // 雨滴擊打隨機脈衝生成器
+                    soundGroup.intervalId = setInterval(() => {
+                        if (!this.activeNodes['rain']) return;
+                        const dropOsc = this.ctx.createOscillator();
+                        const dropGain = this.ctx.createGain();
+                        dropOsc.type = 'sine';
+                        dropOsc.frequency.setValueAtTime(2000 + Math.random() * 3000, this.ctx.currentTime);
+                        dropGain.gain.setValueAtTime(0.03 * Math.random(), this.ctx.currentTime);
+                        dropGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.04);
+
+                        dropOsc.connect(dropGain);
+                        dropGain.connect(soundGroup.gain);
+                        dropOsc.start();
+                        dropOsc.stop(this.ctx.currentTime + 0.05);
+                    }, 40);
+
+                } else if (type === 'ocean') {
+                    // 海浪聲：LFO 低頻振盪器同時控制音量與低通濾波截止頻率（潮起潮落）
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const oceanSource = this.ctx.createBufferSource();
+                    oceanSource.buffer = noiseBuffer;
+                    oceanSource.loop = true;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(400, this.ctx.currentTime);
+
+                    const lfo = this.ctx.createOscillator();
+                    lfo.frequency.setValueAtTime(0.08, this.ctx.currentTime); // ~12.5秒週期
+
+                    const lfoGain = this.ctx.createGain();
+                    lfoGain.gain.setValueAtTime(350, this.ctx.currentTime);
+
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(filter.frequency);
+
+                    oceanSource.connect(filter);
+                    filter.connect(soundGroup.gain);
+
+                    oceanSource.start();
+                    lfo.start();
+                    soundGroup.nodes.push(oceanSource, lfo);
+
+                } else if (type === 'bonfire') {
+                    // 營火聲：暖低頻噪音 + 隨機爆裂 Pop/Crackle 指數衰減脈衝
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const fireSource = this.ctx.createBufferSource();
+                    fireSource.buffer = noiseBuffer;
+                    fireSource.loop = true;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+
+                    fireSource.connect(filter);
+                    filter.connect(soundGroup.gain);
+                    fireSource.start();
+                    soundGroup.nodes.push(fireSource);
+
+                    // 柴火爆裂點滴
+                    soundGroup.intervalId = setInterval(() => {
+                        if (!this.activeNodes['bonfire']) return;
+                        if (Math.random() < 0.35) {
+                            const crackleGain = this.ctx.createGain();
+                            const crackleBufferSource = this.ctx.createBufferSource();
+                            crackleBufferSource.buffer = noiseBuffer;
+                            crackleGain.gain.setValueAtTime(0.12 * Math.random(), this.ctx.currentTime);
+                            crackleGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.015);
+
+                            crackleBufferSource.connect(crackleGain);
+                            crackleGain.connect(soundGroup.gain);
+                            crackleBufferSource.start();
+                            crackleBufferSource.stop(this.ctx.currentTime + 0.02);
+                        }
+                    }, 60);
+
+                } else if (type === 'cafe') {
+                    // 咖啡廳：多重人聲 Formant Bandpass 共振頻段 (500Hz, 1200Hz, 2500Hz)
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const cafeSource = this.ctx.createBufferSource();
+                    cafeSource.buffer = noiseBuffer;
+                    cafeSource.loop = true;
+
+                    const f1 = this.ctx.createBiquadFilter();
+                    f1.type = 'bandpass';
+                    f1.frequency.setValueAtTime(500, this.ctx.currentTime);
+                    f1.Q.setValueAtTime(3, this.ctx.currentTime);
+
+                    const f2 = this.ctx.createBiquadFilter();
+                    f2.type = 'bandpass';
+                    f2.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                    f2.Q.setValueAtTime(4, this.ctx.currentTime);
+
+                    cafeSource.connect(f1);
+                    cafeSource.connect(f2);
+                    f1.connect(soundGroup.gain);
+                    f2.connect(soundGroup.gain);
+
+                    cafeSource.start();
+                    soundGroup.nodes.push(cafeSource);
+
+                } else if (type === 'birds') {
+                    // 森林晨鳥：間歇性 FM 滑音 (Frequency Sweep) 鳴叫
+                    soundGroup.intervalId = setInterval(() => {
+                        if (!this.activeNodes['birds']) return;
+                        if (Math.random() < 0.4) {
+                            const now = this.ctx.currentTime;
+                            const birdOsc = this.ctx.createOscillator();
+                            const birdGain = this.ctx.createGain();
+
+                            birdOsc.type = 'sine';
+                            const baseFreq = 2400 + Math.random() * 1200;
+                            birdOsc.frequency.setValueAtTime(baseFreq, now);
+                            birdOsc.frequency.exponentialRampToValueAtTime(baseFreq + 800, now + 0.1);
+
+                            birdGain.gain.setValueAtTime(0.001, now);
+                            birdGain.gain.linearRampToValueAtTime(0.15, now + 0.02);
+                            birdGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+                            birdOsc.connect(birdGain);
+                            birdGain.connect(soundGroup.gain);
+
+                            birdOsc.start(now);
+                            birdOsc.stop(now + 0.13);
+                        }
+                    }, 2000);
+                }
+
+                this.activeNodes[type] = soundGroup;
+            }
+
+            stopSound(type) {
+                if (this.activeNodes[type]) {
+                    const soundGroup = this.activeNodes[type];
+                    if (soundGroup.intervalId) clearInterval(soundGroup.intervalId);
+                    soundGroup.nodes.forEach(node => {
+                        try { node.stop(); } catch (e) {}
+                    });
+                    delete this.activeNodes[type];
+                }
+            }
+
+            setVolume(type, val) {
+                if (this.activeNodes[type]) {
+                    this.activeNodes[type].gain.gain.setValueAtTime(parseFloat(val), this.ctx.currentTime);
+                }
+            }
+        }
+
+        const soundEngine = new WebSoundEngine();
+
+        /* ==========================================================================
+           2. 資料狀態與 localStorage 儲存模組 (State Management)
+           ========================================================================== */
+        const DEFAULT_STATE = {
+            settings: {
+                focusDuration: 25,
+                breakDuration: 5,
+                theme: 'theme-tomato',
+                masterVolume: 0.8
+            },
+            todos: [
+                { id: '1', text: '研讀資料與系統分析', completed: false, pomodoros: 2 },
+                { id: '2', text: '撰寫報告與視覺介面設計', completed: false, pomodoros: 1 }
+            ],
+            logs: [],
+            activeTaskId: null
+        };
+
+        let appState = JSON.parse(localStorage.getItem('glass_pomodoro_data')) || DEFAULT_STATE;
+
+        function saveState() {
+            localStorage.setItem('glass_pomodoro_data', JSON.stringify(appState));
+        }
+
+        /* ==========================================================================
+           3. 計時器核心與邏輯 (Timer Controller)
+           ========================================================================== */
+        let timerInterval = null;
+        let isRunning = false;
+        let currentMode = 'focus'; // 'focus' | 'break'
+        let timeRemaining = appState.settings.focusDuration * 60;
+        let totalDuration = appState.settings.focusDuration * 60;
+
+        const timeDisplay = document.getElementById('timeDisplay');
+        const timerStatusText = document.getElementById('timerStatusText');
+        const startPauseBtn = document.getElementById('startPauseBtn');
+        const startPauseIcon = document.getElementById('startPauseIcon');
+        const startPauseText = document.getElementById('startPauseText');
+        const progressRing = document.getElementById('progressRing');
+        const circumference = 2 * Math.PI * 110; // SVG circle radius 110
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeRemaining / 60);
+            const secs = timeRemaining % 60;
+            const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            timeDisplay.textContent = formatted;
+
+            // 網頁標題動態更新
+            const modeName = currentMode === 'focus' ? '專注中' : '休息中';
+            document.title = `(${formatted}) ${modeName} - 玻璃擬態番茄鐘`;
+
+            // 動態進度條更新
+            const progress = timeRemaining / totalDuration;
+            const offset = circumference - (progress * circumference);
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        function toggleTimer() {
+            soundEngine.init();
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            isRunning = true;
+            startPauseIcon.textContent = '⏸';
+            startPauseText.textContent = '暫停計時';
+            timerStatusText.textContent = currentMode === 'focus' ? 'FOCUSING' : 'RESTING';
+
+            timerInterval = setInterval(() => {
+                if (timeRemaining > 0) {
+                    timeRemaining--;
+                    updateTimerDisplay();
+                } else {
+                    handleTimerCompletion();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            startPauseIcon.textContent = '▶';
+            startPauseText.textContent = '繼續計時';
+            timerStatusText.textContent = 'PAUSED';
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            const dur = currentMode === 'focus' ? appState.settings.focusDuration : appState.settings.breakDuration;
+            timeRemaining = dur * 60;
+            totalDuration = timeRemaining;
+            startPauseText.textContent = currentMode === 'focus' ? '開始專注' : '開始休息';
+            timerStatusText.textContent = 'READY TO ' + (currentMode === 'focus' ? 'FOCUS' : 'REST');
+            updateTimerDisplay();
+        }
+
+        function skipTimer() {
+            resetTimer();
+            switchMode(currentMode === 'focus' ? 'break' : 'focus');
+        }
+
+        function switchMode(mode) {
+            pauseTimer();
+            currentMode = mode;
+            const focusBtn = document.getElementById('modeFocusBtn');
+            const breakBtn = document.getElementById('modeBreakBtn');
+
+            if (mode === 'focus') {
+                focusBtn.className = 'px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-white/30 text-white shadow-md';
+                breakBtn.className = 'px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 text-white/70 hover:text-white';
+            } else {
+                breakBtn.className = 'px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 bg-white/30 text-white shadow-md';
+                focusBtn.className = 'px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-300 text-white/70 hover:text-white';
+            }
+
+            resetTimer();
+        }
+
+        /* 倒數歸零處理：絕對不自動播放下階段，等待手動點擊 */
+        function handleTimerCompletion() {
+            pauseTimer();
+            soundEngine.playChime();
+
+            // 廣播桌面通知
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const title = currentMode === 'focus' ? '🎉 專注完成！' : '⏰ 休息結束！';
+                const body = currentMode === 'focus' ? '太棒了！休息一下，準備迎接下一個挑戰。' : '休息充分囉，準備好繼續專注了嗎？';
+                new Notification(title, { body, icon: '🍅' });
+            }
+
+            // 記錄 Log 與 任務番茄數更新
+            if (currentMode === 'focus') {
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                
+                let activeTaskName = '自由專注';
+                if (appState.activeTaskId) {
+                    const task = appState.todos.find(t => t.id === appState.activeTaskId);
+                    if (task) {
+                        task.pomodoros = (task.pomodoros || 0) + 1;
+                        activeTaskName = task.text;
+                    }
+                }
+
+                appState.logs.unshift({
+                    id: Date.now().toString(),
+                    timestamp: timeStr,
+                    duration: appState.settings.focusDuration,
+                    taskName: activeTaskName
+                });
+
+                saveState();
+                renderTodos();
+                renderLogs();
+                updateChart();
+            }
+
+            alert(currentMode === 'focus' ? '🎉 專注完成！請點擊確認後開始休息。' : '⏰ 休息結束！點擊確認後可開始新的專注。');
+            
+            // 自動切換模式標籤，但維持停止狀態等待點擊
+            switchMode(currentMode === 'focus' ? 'break' : 'focus');
+        }
+
+        /* ==========================================================================
+           4. 主題切換與 UI 渲染 (Theme & Modal)
+           ========================================================================== */
+        function changeTheme(themeName) {
+            document.body.className = `${themeName} text-white antialiased flex flex-col min-h-screen`;
+            appState.settings.theme = themeName;
+            document.getElementById('themeSelect').value = themeName;
+            saveState();
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingFocusInput').value = appState.settings.focusDuration;
+            document.getElementById('settingBreakInput').value = appState.settings.breakDuration;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            const focusVal = parseInt(document.getElementById('settingFocusInput').value);
+            const breakVal = parseInt(document.getElementById('settingBreakInput').value);
+
+            if (focusVal > 0 && breakVal > 0) {
+                appState.settings.focusDuration = focusVal;
+                appState.settings.breakDuration = breakVal;
+                saveState();
+                closeSettingsModal();
+                resetTimer();
+            } else {
+                alert('請輸入有效的分鐘數！');
+            }
+        }
+
+        /* ==========================================================================
+           5. 音效控制 UI 互動 (Sound Control)
+           ========================================================================== */
+        function toggleSound(type) {
+            const btn = document.getElementById(`btn-${type}`);
+            const vol = document.getElementById(`vol-${type}`).value;
+
+            if (soundEngine.activeNodes[type]) {
+                soundEngine.stopSound(type);
+                btn.textContent = '播放';
+                btn.classList.remove('bg-white/40');
+            } else {
+                soundEngine.startSound(type, vol);
+                btn.textContent = '停止';
+                btn.classList.add('bg-white/40');
+            }
+        }
+
+        function setSoundVolume(type, val) {
+            soundEngine.setVolume(type, val);
+        }
+
+        function updateMasterVolume(val) {
+            soundEngine.setMasterVolume(val);
+            appState.settings.masterVolume = parseFloat(val);
+            saveState();
+        }
+
+        /* ==========================================================================
+           6. 待辦事項模組 (To-Do List)
+           ========================================================================== */
+        function renderTodos() {
+            const listEl = document.getElementById('todoList');
+            listEl.innerHTML = '';
+
+            let completedCount = 0;
+            appState.todos.forEach(todo => {
+                if (todo.completed) completedCount++;
+
+                const isActive = appState.activeTaskId === todo.id;
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-2xl flex items-center justify-between transition-all border ${isActive ? 'bg-white/25 border-yellow-300/60 shadow-lg' : 'bg-white/5 border-white/10 hover:bg-white/10'}`;
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3 overflow-hidden cursor-pointer" onclick="toggleTaskSelect('${todo.id}')">
+                        <input type="checkbox" ${todo.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTodoComplete('${todo.id}')" class="w-4 h-4 rounded accent-yellow-300 cursor-pointer">
+                        <span class="text-sm font-medium ${todo.completed ? 'line-through opacity-50' : ''} truncate">${escapeHtml(todo.text)}</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-white/15 font-bold">🍅 ${todo.pomodoros || 0}</span>
+                        <button onclick="deleteTodo('${todo.id}')" class="text-white/40 hover:text-white p-1 text-xs">✕</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+
+            document.getElementById('todoCountDisplay').textContent = `${completedCount} / ${appState.todos.length} 完成`;
+
+            // 更新當前任務文字
+            const activeTask = appState.todos.find(t => t.id === appState.activeTaskId);
+            document.getElementById('activeTaskName').textContent = activeTask ? activeTask.text : '未選擇任務 (自由專注)';
+        }
+
+        function addTodo(e) {
+            e.preventDefault();
+            const input = document.getElementById('todoInput');
+            const text = input.value.trim();
+            if (text) {
+                appState.todos.push({
+                    id: Date.now().toString(),
+                    text: text,
+                    completed: false,
+                    pomodoros: 0
+                });
+                input.value = '';
+                saveState();
+                renderTodos();
+            }
+        }
+
+        function toggleTodoComplete(id) {
+            const todo = appState.todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                saveState();
+                renderTodos();
+            }
+        }
+
+        function toggleTaskSelect(id) {
+            if (appState.activeTaskId === id) {
+                appState.activeTaskId = null;
+            } else {
+                appState.activeTaskId = id;
+            }
+            saveState();
+            renderTodos();
+        }
+
+        function deleteTodo(id) {
+            appState.todos = appState.todos.filter(t => t.id !== id);
+            if (appState.activeTaskId === id) appState.activeTaskId = null;
+            saveState();
+            renderTodos();
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        /* ==========================================================================
+           7. 詳細日誌 (Logs)
+           ========================================================================== */
+        function renderLogs() {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = '';
+
+            if (appState.logs.length === 0) {
+                container.innerHTML = '<div class="text-white/50 text-center py-4">尚無專注紀錄</div>';
+                return;
+            }
+
+            appState.logs.forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'p-2 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center';
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-yellow-300">🎯 ${log.duration} 分鐘</span>
+                        <span class="text-white/80 ml-2">${escapeHtml(log.taskName)}</span>
+                    </div>
+                    <span class="text-white/50 text-xs">${log.timestamp.split(' ')[1]}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm('確定要清空所有專注歷史紀錄嗎？')) {
+                appState.logs = [];
+                saveState();
+                renderLogs();
+                updateChart();
+            }
+        }
+
+        /* ==========================================================================
+           8. Chart.js 視覺化專注趨勢圖表 (Analytics)
+           ========================================================================== */
+        let focusChart = null;
+        let chartMode = 'week'; // 'week' | 'month'
+
+        function initChart() {
+            const ctx = document.getElementById('focusChart').getContext('2d');
+            focusChart = new Chart(ctx, {
+                type: 'bar',
+                data: getChartData(),
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function switchChartMode(mode) {
+            chartMode = mode;
+            document.getElementById('chartWeekBtn').className = mode === 'week' ? 'px-2.5 py-1 rounded-lg font-semibold bg-white/30 text-white' : 'px-2.5 py-1 rounded-lg font-semibold text-white/70 hover:text-white';
+            document.getElementById('chartMonthBtn').className = mode === 'month' ? 'px-2.5 py-1 rounded-lg font-semibold bg-white/30 text-white' : 'px-2.5 py-1 rounded-lg font-semibold text-white/70 hover:text-white';
+            updateChart();
+        }
+
+        function getChartData() {
+            const daysCount = chartMode === 'week' ? 7 : 30;
+            const labels = [];
+            const data = new Array(daysCount).fill(0);
+
+            const now = new Date();
+            for (let i = daysCount - 1; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+                const dateStr = String(d.getDate()).padStart(2, '0');
+                labels.push(`${monthStr}/${dateStr}`);
+
+                const fullDateStr = `${d.getFullYear()}-${monthStr}-${dateStr}`;
+                appState.logs.forEach(log => {
+                    if (log.timestamp.startsWith(fullDateStr)) {
+                        data[daysCount - 1 - i] += log.duration;
+                    }
+                });
+            }
+
+            return {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            };
+        }
+
+        function updateChart() {
+            if (focusChart) {
+                focusChart.data = getChartData();
+                focusChart.update();
+            }
+        }
+
+        /* ==========================================================================
+           9. 頁面初始化 (Application Init)
+           ========================================================================== */
+        window.addEventListener('DOMContentLoaded', () => {
+            // 載入主題
+            changeTheme(appState.settings.theme || 'theme-tomato');
+            document.getElementById('masterVolume').value = appState.settings.masterVolume || 0.8;
+
+            // 請求桌面通知權限
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
+            // 初始化 UI
+            resetTimer();
+            renderTodos();
+            renderLogs();
+            initChart();
+        });
+    </script>
+</body>
+</html>
